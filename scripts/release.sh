@@ -33,8 +33,9 @@ if git rev-parse "v$VERSION" >/dev/null 2>&1; then
   exit 1
 fi
 
+pnpm typecheck
+pnpm test
 pnpm build
-pnpm exec vitest run tests/unit/release-config.test.ts
 
 node -e '
 const fs = require("node:fs");

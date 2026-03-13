@@ -6,7 +6,7 @@ import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Toaster position="bottom-right" />
+    <Toaster position="bottom-left" />
     <App />
   </StrictMode>,
 );

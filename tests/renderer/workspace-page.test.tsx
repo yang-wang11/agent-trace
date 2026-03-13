@@ -12,6 +12,15 @@ vi.mock("../../src/renderer/src/lib/electron-api", () => ({
   getElectronAPI: () => ({
     listSessions: vi.fn().mockResolvedValue([]),
     getProxyStatus: vi.fn().mockResolvedValue({ isRunning: false }),
+    getUpdateState: vi.fn().mockResolvedValue({
+      status: "idle",
+      currentVersion: "0.1.2",
+      availableVersion: null,
+      downloadPercent: null,
+      message: null,
+      checkedAt: null,
+    }),
+    onUpdateStateChanged: vi.fn().mockReturnValue(() => {}),
   }),
 }));
 

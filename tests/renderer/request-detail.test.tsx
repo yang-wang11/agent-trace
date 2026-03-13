@@ -9,6 +9,15 @@ import type { RequestRecord } from "../../src/shared/types";
 vi.mock("../../src/renderer/src/lib/electron-api", () => ({
   getElectronAPI: () => ({
     getSessionRequests: vi.fn().mockResolvedValue([]),
+    getUpdateState: vi.fn().mockResolvedValue({
+      status: "idle",
+      currentVersion: "0.1.2",
+      availableVersion: null,
+      downloadPercent: null,
+      message: null,
+      checkedAt: null,
+    }),
+    onUpdateStateChanged: vi.fn().mockReturnValue(() => {}),
   }),
 }));
 

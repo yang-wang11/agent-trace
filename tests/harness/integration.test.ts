@@ -32,6 +32,7 @@ function makeClaudeBody(opts: {
   system?: string;
   userMessage?: string;
   messages?: Array<{ role: string; content: string }>;
+  metadataUserId?: string;
 }): string {
   return JSON.stringify({
     model: opts.model ?? "claude-opus-4-6",
@@ -39,6 +40,9 @@ function makeClaudeBody(opts: {
     messages: opts.messages ?? [
       { role: "user", content: opts.userMessage ?? "Hello" },
     ],
+    metadata: opts.metadataUserId
+      ? { user_id: opts.metadataUserId }
+      : undefined,
     max_tokens: 1024,
     stream: false,
   });
@@ -184,15 +188,19 @@ describe("End-to-End Pipeline: Proxy → Session → DB", () => {
     expect(requests[0]!.requestId).toBe(record.requestId);
   });
 
-  it("groups multiple requests into the same session by system prompt", async () => {
-    const system = "You are a coding assistant for TypeScript projects.";
+  it("groups multiple requests into the same session by metadata session key", async () => {
+    const sessionUserId = "user_demo_account__session_shared-harness-session";
 
     // Send 3 requests with the same system prompt
     for (let i = 0; i < 3; i++) {
       await httpPost(
         `http://127.0.0.1:${proxyPort}`,
         "/v1/messages",
-        makeClaudeBody({ system, userMessage: `Question ${i}` }),
+        makeClaudeBody({
+          system: "You are a coding assistant for TypeScript projects.",
+          userMessage: `Question ${i}`,
+          metadataUserId: sessionUserId,
+        }),
       );
     }
 
@@ -270,6 +278,8 @@ describe("End-to-End Pipeline: Proxy → Session → DB", () => {
   });
 
   it("handles concurrent requests without data corruption", async () => {
+    const sessionUserId =
+      "user_concurrent_account__session_shared-concurrent-session";
     const promises = Array.from({ length: 5 }, (_, i) =>
       httpPost(
         `http://127.0.0.1:${proxyPort}`,
@@ -277,6 +287,7 @@ describe("End-to-End Pipeline: Proxy → Session → DB", () => {
         makeClaudeBody({
           system: "Shared system prompt",
           userMessage: `Concurrent request ${i}`,
+          metadataUserId: sessionUserId,
         }),
       ),
     );
@@ -288,7 +299,7 @@ describe("End-to-End Pipeline: Proxy → Session → DB", () => {
 
     expect(capturedRecords).toHaveLength(5);
 
-    // All should be same session (same system prompt)
+    // All should be same session (same metadata session key)
     const sessionIds = new Set(capturedRecords.map((r) => r.sessionId));
     expect(sessionIds.size).toBe(1);
 

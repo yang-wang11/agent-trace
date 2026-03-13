@@ -1,8 +1,9 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { IPC } from "../shared/ipc-channels";
 import type { AppSettings, SessionSummary, RequestRecord } from "../shared/types";
+import type { UpdateState } from "../shared/update";
 
-const electronAPI = {
+export const electronAPI = {
   getSettings: (): Promise<AppSettings> =>
     ipcRenderer.invoke(IPC.GET_SETTINGS),
 
@@ -33,6 +34,18 @@ const electronAPI = {
   ): Promise<{ sessions: SessionSummary[]; requests: RequestRecord[] }> =>
     ipcRenderer.invoke(IPC.SEARCH, query),
 
+  getUpdateState: (): Promise<UpdateState> =>
+    ipcRenderer.invoke(IPC.GET_UPDATE_STATE),
+
+  checkForUpdates: (): Promise<UpdateState> =>
+    ipcRenderer.invoke(IPC.CHECK_FOR_UPDATES),
+
+  downloadUpdate: (): Promise<UpdateState> =>
+    ipcRenderer.invoke(IPC.DOWNLOAD_UPDATE),
+
+  quitAndInstallUpdate: (): Promise<void> =>
+    ipcRenderer.invoke(IPC.QUIT_AND_INSTALL_UPDATE),
+
   onCaptureUpdated: (cb: (sessions: SessionSummary[]) => void): (() => void) => {
     const handler = (_e: Electron.IpcRendererEvent, sessions: SessionSummary[]) =>
       cb(sessions);
@@ -44,6 +57,13 @@ const electronAPI = {
     const handler = (_e: Electron.IpcRendererEvent, error: string) => cb(error);
     ipcRenderer.on(IPC.PROXY_ERROR, handler);
     return () => ipcRenderer.removeListener(IPC.PROXY_ERROR, handler);
+  },
+
+  onUpdateStateChanged: (cb: (state: UpdateState) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, state: UpdateState) =>
+      cb(state);
+    ipcRenderer.on(IPC.UPDATE_STATE_CHANGED, handler);
+    return () => ipcRenderer.removeListener(IPC.UPDATE_STATE_CHANGED, handler);
   },
 };
 

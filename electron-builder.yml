@@ -26,3 +26,7 @@ linux:
   target:
     - AppImage
 artifactName: ${productName}-${version}-${arch}.${ext}
+publish:
+  provider: github
+  owner: dvlin-dev
+  repo: claude-code-debug

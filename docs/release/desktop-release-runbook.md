@@ -5,12 +5,12 @@
 - 生成 macOS 安装包
 - 通过 GitHub Actions 做签名 / 公证 / 打包
 - 直接发布到 GitHub Release
+- 应用内通过 GitHub Release 做自动更新
 
 不包含：
 
 - Windows
 - Linux
-- 自动更新
 - 多渠道分发
 - 对象存储/CDN
 
@@ -219,16 +219,45 @@
 - `APPLE_API_ISSUER`
   - Issuer ID
 
-## 6. 最终你只需要达成的结果
+## 6. 自动更新要求
+
+当前自动更新方案只支持：
+
+- macOS
+- GitHub Release
+- `electron-updater + GitHub provider`
+
+发布资产必须包含：
+
+- `.dmg`
+- `.dmg.blockmap`
+- `.zip`
+- `.zip.blockmap`
+- `latest-mac.yml`
+
+其中真正被自动更新消费的是：
+
+- `.zip`
+- `.zip.blockmap`
+- `latest-mac.yml`
+
+应用内行为：
+
+1. 应用启动后延迟后台检查更新
+2. 设置页可以手动检查、下载和安装
+3. 左下角 toast 会在有新版本、下载完成、更新失败时提示
+
+## 7. 最终你只需要达成的结果
 
 完成后，发布流程应该是：
 
 1. 本地执行 `./scripts/release.sh 0.1.0`
 2. 仓库自动产生 `v0.1.0`
 3. GitHub Actions 构建并公证 macOS 安装包
-4. 在 GitHub Releases 里拿到 `.dmg` 和 `.zip`
+4. 在 GitHub Releases 里拿到 `.dmg`、`.zip`、`latest-mac.yml` 和 blockmap
+5. 客户端能检测、下载并安装新版本
 
-## 7. 参考文件
+## 8. 参考文件
 
 当前项目：
 

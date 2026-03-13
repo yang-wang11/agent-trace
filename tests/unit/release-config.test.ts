@@ -35,6 +35,10 @@ describe("macOS release config", () => {
     expect(config).toContain("gatekeeperAssess: false");
     expect(config).toContain("entitlements: build/entitlements.mac.plist");
     expect(config).toContain("entitlementsInherit: build/entitlements.mac.plist");
+    expect(config).toContain("publish:");
+    expect(config).toContain("provider: github");
+    expect(config).toContain("owner: dvlin-dev");
+    expect(config).toContain("repo: claude-code-debug");
   });
 
   it("includes release helper scripts and signing entitlements", async () => {
@@ -44,6 +48,8 @@ describe("macOS release config", () => {
     await expect(read("scripts/release.sh")).resolves.toContain(
       "用法: ./scripts/release.sh <version>",
     );
+    await expect(read("scripts/release.sh")).resolves.toContain("pnpm typecheck");
+    await expect(read("scripts/release.sh")).resolves.toContain("pnpm test");
     await expect(read("build/entitlements.mac.plist")).resolves.toContain(
       "com.apple.security.cs.allow-jit",
     );
@@ -64,5 +70,8 @@ describe("macOS release config", () => {
       "pnpm exec node ./scripts/run-electron-builder.cjs --mac dmg zip --arm64 --publish never",
     );
     expect(workflow).toContain("uses: softprops/action-gh-release@v2");
+    expect(workflow).toContain("dist/*.dmg.blockmap");
+    expect(workflow).toContain("dist/*.zip.blockmap");
+    expect(workflow).toContain("dist/latest-mac.yml");
   });
 });

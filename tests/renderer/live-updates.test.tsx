@@ -3,12 +3,23 @@ import { renderHook, act } from "@testing-library/react";
 import { useSessionStore } from "../../src/renderer/src/stores/session-store";
 import { useAppStore } from "../../src/renderer/src/stores/app-store";
 import type { SessionSummary } from "../../src/shared/types";
+import { createDefaultUpdateState } from "../../src/shared/update";
 
 // Mock the electron API
 const mockGetSettings = vi.fn().mockResolvedValue({ targetUrl: "https://api.anthropic.com" });
 const mockGetProxyStatus = vi.fn().mockResolvedValue({ isRunning: false });
 const mockListSessions = vi.fn().mockResolvedValue([]);
 const mockClearData = vi.fn().mockResolvedValue(undefined);
+const mockGetUpdateState = vi.fn().mockResolvedValue(
+  createDefaultUpdateState("0.1.2"),
+);
+const mockCheckForUpdates = vi.fn().mockResolvedValue(
+  createDefaultUpdateState("0.1.2"),
+);
+const mockDownloadUpdate = vi.fn().mockResolvedValue(
+  createDefaultUpdateState("0.1.2"),
+);
+const mockQuitAndInstallUpdate = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("../../src/renderer/src/lib/electron-api", () => ({
   getElectronAPI: () => ({
@@ -16,6 +27,11 @@ vi.mock("../../src/renderer/src/lib/electron-api", () => ({
     getProxyStatus: mockGetProxyStatus,
     listSessions: mockListSessions,
     clearData: mockClearData,
+    getUpdateState: mockGetUpdateState,
+    checkForUpdates: mockCheckForUpdates,
+    downloadUpdate: mockDownloadUpdate,
+    quitAndInstallUpdate: mockQuitAndInstallUpdate,
+    onUpdateStateChanged: vi.fn().mockReturnValue(() => {}),
     onCaptureUpdated: vi.fn().mockReturnValue(() => {}),
     onProxyError: vi.fn().mockReturnValue(() => {}),
   }),
@@ -92,6 +108,7 @@ describe("App Store", () => {
       isListening: false,
       proxyAddress: null,
       initialized: false,
+      updateState: createDefaultUpdateState(),
     });
   });
 

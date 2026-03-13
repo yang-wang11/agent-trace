@@ -8,9 +8,12 @@ import { createProxyServer, type ProxyServer } from "./proxy/server";
 import { registerIpcHandlers } from "./ipc/register-ipc";
 import { IPC } from "../shared/ipc-channels";
 import { DEFAULT_PROXY_PORT } from "../shared/defaults";
+import { createUpdateService } from "./update/update-service";
 
 let mainWindow: BrowserWindow | null = null;
 let proxy: ProxyServer | null = null;
+let disposeIpcHandlers: (() => void) | null = null;
+let disposeUpdateService: (() => void) | null = null;
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -45,6 +48,12 @@ app.whenReady().then(() => {
   const db = createDatabase(join(userDataPath, "history.db"));
   const historyStore = new HistoryStore(db);
   const sessionManager = new SessionManager();
+  const updateService = createUpdateService({
+    currentVersion: app.getVersion(),
+    platform: process.platform,
+    isPackaged: app.isPackaged,
+  });
+  disposeUpdateService = () => updateService.dispose();
 
   // Initialize proxy (not started yet)
   const settings = settingsStore.getSettings();
@@ -76,15 +85,21 @@ app.whenReady().then(() => {
   });
 
   // Register IPC handlers
-  registerIpcHandlers({
+  disposeIpcHandlers = registerIpcHandlers({
     settingsStore,
     historyStore,
     sessionManager,
     getProxy: () => proxy,
     getMainWindow: () => mainWindow,
+    updateService,
   });
 
   createWindow();
+
+  const updateCheckTimer = setTimeout(() => {
+    void updateService.checkForUpdates().catch(() => undefined);
+  }, 15_000);
+  updateCheckTimer.unref?.();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -100,6 +115,8 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", async () => {
+  disposeIpcHandlers?.();
+  disposeUpdateService?.();
   if (proxy?.isRunning()) {
     await proxy.stop();
   }

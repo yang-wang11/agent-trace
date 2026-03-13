@@ -1,5 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { IPC } from "../../src/shared/ipc-channels";
+
+const handleMock = vi.fn();
+const sendMock = vi.fn();
+
+vi.mock("electron", () => ({
+  ipcMain: {
+    handle: handleMock,
+  },
+}));
 
 describe("IPC Channels", () => {
   it("defines all required channels", () => {
@@ -12,8 +21,13 @@ describe("IPC Channels", () => {
     expect(IPC.GET_REQUEST_DETAIL).toBe("app:get-request-detail");
     expect(IPC.CLEAR_DATA).toBe("app:clear-data");
     expect(IPC.SEARCH).toBe("app:search");
+    expect(IPC.GET_UPDATE_STATE).toBe("app:get-update-state");
+    expect(IPC.CHECK_FOR_UPDATES).toBe("app:check-for-updates");
+    expect(IPC.DOWNLOAD_UPDATE).toBe("app:download-update");
+    expect(IPC.QUIT_AND_INSTALL_UPDATE).toBe("app:quit-and-install-update");
     expect(IPC.CAPTURE_UPDATED).toBe("proxy:capture-updated");
     expect(IPC.PROXY_ERROR).toBe("proxy:error");
+    expect(IPC.UPDATE_STATE_CHANGED).toBe("app:update-state-changed");
   });
 
   it("has unique channel names", () => {
@@ -26,5 +40,105 @@ describe("IPC Channels", () => {
     for (const channel of Object.values(IPC)) {
       expect(channel).toMatch(/^(app|proxy):/);
     }
+  });
+});
+
+describe("registerIpcHandlers", () => {
+  beforeEach(() => {
+    handleMock.mockReset();
+    sendMock.mockReset();
+  });
+
+  it("registers update handlers and broadcasts state changes", async () => {
+    const { registerIpcHandlers } = await import(
+      "../../src/main/ipc/register-ipc"
+    );
+
+    const updateService = {
+      getState: vi.fn().mockReturnValue({
+        status: "idle",
+        currentVersion: "0.1.2",
+        availableVersion: null,
+        downloadPercent: null,
+        message: null,
+        checkedAt: null,
+      }),
+      checkForUpdates: vi.fn().mockResolvedValue({
+        status: "checking",
+        currentVersion: "0.1.2",
+        availableVersion: null,
+        downloadPercent: null,
+        message: null,
+        checkedAt: null,
+      }),
+      downloadUpdate: vi.fn().mockResolvedValue({
+        status: "downloading",
+        currentVersion: "0.1.2",
+        availableVersion: "0.1.3",
+        downloadPercent: 12,
+        message: null,
+        checkedAt: null,
+      }),
+      quitAndInstall: vi.fn(),
+      subscribe: vi.fn((listener: (state: unknown) => void) => {
+        listener({
+          status: "available",
+          currentVersion: "0.1.2",
+          availableVersion: "0.1.3",
+          downloadPercent: null,
+          message: null,
+          checkedAt: "2026-03-13T10:00:00.000Z",
+        });
+        return () => {};
+      }),
+    };
+
+    registerIpcHandlers({
+      settingsStore: {
+        getSettings: vi.fn().mockReturnValue({ targetUrl: "" }),
+        saveSettings: vi.fn(),
+      } as never,
+      historyStore: {
+        listSessions: vi.fn().mockReturnValue([]),
+        listRequests: vi.fn().mockReturnValue([]),
+        getRequest: vi.fn().mockReturnValue(null),
+        clearAll: vi.fn(),
+        search: vi.fn().mockReturnValue({ sessions: [], requests: [] }),
+      } as never,
+      sessionManager: {} as never,
+      getProxy: () => null,
+      getMainWindow: () =>
+        ({
+          webContents: {
+            send: sendMock,
+          },
+        }) as never,
+      updateService,
+    });
+
+    expect(handleMock).toHaveBeenCalledWith(
+      IPC.GET_UPDATE_STATE,
+      expect.any(Function),
+    );
+    expect(handleMock).toHaveBeenCalledWith(
+      IPC.CHECK_FOR_UPDATES,
+      expect.any(Function),
+    );
+    expect(handleMock).toHaveBeenCalledWith(
+      IPC.DOWNLOAD_UPDATE,
+      expect.any(Function),
+    );
+    expect(handleMock).toHaveBeenCalledWith(
+      IPC.QUIT_AND_INSTALL_UPDATE,
+      expect.any(Function),
+    );
+    expect(updateService.subscribe).toHaveBeenCalled();
+    expect(sendMock).toHaveBeenCalledWith(
+      IPC.UPDATE_STATE_CHANGED,
+      expect.objectContaining({
+        status: "available",
+        availableVersion: "0.1.3",
+      }),
+    );
   });
 });

@@ -5,6 +5,7 @@ import type { HistoryStore } from "../store/history-store";
 import type { SessionManager } from "../session/session-manager";
 import type { ProxyServer } from "../proxy/server";
 import { DEFAULT_PROXY_PORT } from "../../shared/defaults";
+import type { UpdateService } from "../update/update-service";
 
 export interface IpcDependencies {
   settingsStore: SettingsStore;
@@ -12,9 +13,10 @@ export interface IpcDependencies {
   sessionManager: SessionManager;
   getProxy: () => ProxyServer | null;
   getMainWindow: () => BrowserWindow | null;
+  updateService: UpdateService;
 }
 
-export function registerIpcHandlers(deps: IpcDependencies): void {
+export function registerIpcHandlers(deps: IpcDependencies): () => void {
   ipcMain.handle(IPC.GET_SETTINGS, () => {
     return deps.settingsStore.getSettings();
   });
@@ -85,4 +87,32 @@ export function registerIpcHandlers(deps: IpcDependencies): void {
     }
     return deps.historyStore.search(query);
   });
+
+  ipcMain.handle(IPC.GET_UPDATE_STATE, () => {
+    return deps.updateService.getState();
+  });
+
+  ipcMain.handle(IPC.CHECK_FOR_UPDATES, () => {
+    return deps.updateService.checkForUpdates();
+  });
+
+  ipcMain.handle(IPC.DOWNLOAD_UPDATE, () => {
+    return deps.updateService.downloadUpdate();
+  });
+
+  ipcMain.handle(IPC.QUIT_AND_INSTALL_UPDATE, () => {
+    return deps.updateService.quitAndInstall();
+  });
+
+  const unsubscribe = deps.updateService.subscribe((state) => {
+    const win = deps.getMainWindow();
+    if (!win) {
+      return;
+    }
+    win.webContents.send(IPC.UPDATE_STATE_CHANGED, state);
+  });
+
+  return () => {
+    unsubscribe();
+  };
 }
