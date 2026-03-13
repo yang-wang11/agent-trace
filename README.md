@@ -50,6 +50,9 @@ pnpm dev
 
 # Build for production
 pnpm build
+
+# Build a local macOS package
+pnpm dist:mac
 ```
 
 Configure Claude Code to use the proxy:
@@ -60,6 +63,57 @@ export ANTHROPIC_BASE_URL=http://127.0.0.1:8888
 ```
 
 Then use Claude Code normally. All requests will appear in the app.
+
+## macOS Release
+
+This project currently supports one release path only:
+
+- build macOS artifacts
+- sign and notarize in GitHub Actions
+- publish directly to GitHub Releases
+
+### Local release command
+
+```bash
+./scripts/release.sh 0.1.0
+```
+
+The script will:
+
+1. verify the working tree is clean
+2. run `pnpm build`
+3. run the release config test
+4. bump `package.json` version
+5. create a release commit
+6. create tag `v<version>`
+7. push the branch and tag
+
+Pushing a tag like `v0.1.0` triggers the workflow:
+
+- `.github/workflows/release-macos.yml`
+
+That workflow builds the macOS `arm64` release, signs and notarizes it when secrets are present, and uploads `.dmg` and `.zip` assets to GitHub Releases.
+
+### Required GitHub Actions secrets
+
+Open the GitHub repository and go to:
+
+`Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`
+
+Add these repository secrets:
+
+- `CSC_LINK`
+  - base64 content of your exported Developer ID Application `.p12`
+- `CSC_KEY_PASSWORD`
+  - password for that `.p12`
+- `APPLE_API_KEY`
+  - App Store Connect API key `.p8` content, either raw PEM or base64
+- `APPLE_API_KEY_ID`
+  - App Store Connect key ID
+- `APPLE_API_ISSUER`
+  - App Store Connect issuer ID
+
+Without these secrets, local packaging still works, but notarization is skipped and GitHub Actions cannot produce a properly notarized public release.
 
 ## Tech Stack
 

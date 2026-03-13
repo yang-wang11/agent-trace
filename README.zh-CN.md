@@ -50,6 +50,9 @@ pnpm dev
 
 # 构建生产版本
 pnpm build
+
+# 本地生成 macOS 安装包
+pnpm dist:mac
 ```
 
 配置 Claude Code 使用代理：
@@ -60,6 +63,57 @@ export ANTHROPIC_BASE_URL=http://127.0.0.1:8888
 ```
 
 然后正常使用 Claude Code，所有请求都会出现在应用中。
+
+## macOS 发布
+
+当前项目只支持这一条发布路径：
+
+- 构建 macOS 安装包
+- 通过 GitHub Actions 做签名和公证
+- 直接发布到 GitHub Releases
+
+### 本地发版命令
+
+```bash
+./scripts/release.sh 0.1.0
+```
+
+这个脚本会：
+
+1. 检查工作区是否干净
+2. 执行 `pnpm build`
+3. 执行发布配置测试
+4. 更新 `package.json` 版本号
+5. 创建发版 commit
+6. 创建 `v<version>` tag
+7. 推送分支和 tag
+
+当 tag 例如 `v0.1.0` 被推送后，会触发：
+
+- `.github/workflows/release-macos.yml`
+
+这个 workflow 会构建 macOS `arm64` 的 `.dmg` 和 `.zip`，在 secrets 齐全时完成签名和公证，然后上传到 GitHub Releases。
+
+### 必填 GitHub Actions secrets
+
+打开 GitHub 仓库后进入：
+
+`Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`
+
+添加下面这些 repository secrets：
+
+- `CSC_LINK`
+  - 导出的 Developer ID Application `.p12` 的 base64 内容
+- `CSC_KEY_PASSWORD`
+  - 这个 `.p12` 的密码
+- `APPLE_API_KEY`
+  - App Store Connect API Key 的 `.p8` 内容，支持原始 PEM 或 base64
+- `APPLE_API_KEY_ID`
+  - App Store Connect 的 Key ID
+- `APPLE_API_ISSUER`
+  - App Store Connect 的 Issuer ID
+
+如果不填这些 secrets，本地仍然可以打包，但会跳过公证；GitHub Actions 也无法产出可正式公开分发的已公证版本。
 
 ## 技术栈
 

@@ -9,7 +9,13 @@ files:
 asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 mac:
+  icon: resources/icon.icns
+  artifactName: ${productName}-${version}-${arch}.${ext}
   category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
   target:
     - dmg
     - zip
@@ -19,3 +25,4 @@ win:
 linux:
   target:
     - AppImage
+artifactName: ${productName}-${version}-${arch}.${ext}
