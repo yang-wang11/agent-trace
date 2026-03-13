@@ -10,6 +10,7 @@ import { IPC } from "../shared/ipc-channels";
 import { DEFAULT_PROXY_PORT } from "../shared/defaults";
 import { createUpdateService } from "./update/update-service";
 import { migrateLegacyUserData } from "./store/user-data-migration";
+import type { CaptureUpdatePayload } from "../shared/types";
 
 let mainWindow: BrowserWindow | null = null;
 let proxy: ProxyServer | null = null;
@@ -79,9 +80,14 @@ app.whenReady().then(async () => {
 
       // Push to renderer
       if (mainWindow) {
+        const payload: CaptureUpdatePayload = {
+          sessions: historyStore.listSessions(),
+          updatedSessionId: sessionId,
+          updatedRequestId: record.requestId,
+        };
         mainWindow.webContents.send(
           IPC.CAPTURE_UPDATED,
-          historyStore.listSessions(),
+          payload,
         );
       }
     },
