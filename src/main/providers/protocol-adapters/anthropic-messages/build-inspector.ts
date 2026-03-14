@@ -32,10 +32,6 @@ export function buildAnthropicInspector(
         ...(normalized.response.usage?.reasoningTokens != null
           ? [{ label: "Reasoning Tokens", value: String(normalized.response.usage.reasoningTokens) }]
           : []),
-        { label: "Request Size", value: `${exchange.requestSize.toLocaleString()} bytes` },
-        ...(exchange.responseSize != null
-          ? [{ label: "Response Size", value: `${exchange.responseSize.toLocaleString()} bytes` }]
-          : []),
       ],
     },
   ];

@@ -37,7 +37,7 @@ export function MainContent() {
           <ResizablePanel defaultSize="65%" minSize="30%">
             <ConversationView />
           </ResizablePanel>
-          <ResizableHandle withHandle />
+          <ResizableHandle />
           <ResizablePanel defaultSize="35%" minSize="20%">
             <InspectorPanel />
           </ResizablePanel>

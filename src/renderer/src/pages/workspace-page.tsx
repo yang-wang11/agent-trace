@@ -26,7 +26,7 @@ export function WorkspacePage() {
             <ResizablePanel defaultSize="25%" minSize="15%" maxSize="40%">
               <SessionSidebar onSettingsClick={() => setSettingsOpen(true)} />
             </ResizablePanel>
-            <ResizableHandle withHandle />
+            <ResizableHandle />
             <ResizablePanel defaultSize="75%">
               <MainContent />
             </ResizablePanel>
