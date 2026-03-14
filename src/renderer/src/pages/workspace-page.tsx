@@ -24,7 +24,7 @@ export function WorkspacePage() {
         <div className="flex-1 overflow-hidden">
           <ResizablePanelGroup orientation="horizontal">
             <ResizablePanel defaultSize="25%" minSize="15%" maxSize="40%">
-              <SessionSidebar />
+              <SessionSidebar onSettingsClick={() => setSettingsOpen(true)} />
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize="75%">

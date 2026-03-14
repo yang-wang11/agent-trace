@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -8,115 +8,114 @@ import {
   CommandList,
 } from "./ui/command";
 import { useSessionStore } from "../stores/session-store";
-import { useAppStore } from "../stores/app-store";
-import { getElectronAPI } from "../lib/electron-api";
-import type { SessionSummary, RequestRecord } from "../../../shared/types";
+import { useProfileStore } from "../stores/profile-store";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [searchSessions, setSearchSessions] = useState<SessionSummary[]>([]);
-  const [searchRequests, setSearchRequests] = useState<RequestRecord[]>([]);
-  const selectSession = useSessionStore((s) => s.selectSession);
-  const toggleListening = useAppStore((s) => s.toggleListening);
-  const clearData = useSessionStore((s) => s.clearData);
+  const sessions = useSessionStore((state) => state.sessions);
+  const selectSession = useSessionStore((state) => state.selectSession);
+  const clearHistory = useSessionStore((state) => state.clearHistory);
+  const profiles = useProfileStore((state) => state.profiles);
+  const statuses = useProfileStore((state) => state.statuses);
+  const startProfile = useProfileStore((state) => state.startProfile);
+  const stopProfile = useProfileStore((state) => state.stopProfile);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((prev) => !prev);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        setOpen((previous) => !previous);
       }
     };
+
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleSearch = useCallback(async (value: string) => {
-    setQuery(value);
-    if (!value.trim()) {
-      setSearchSessions([]);
-      setSearchRequests([]);
-      return;
+  const normalizedQuery = query.trim().toLowerCase();
+  const matchingSessions = useMemo(() => {
+    if (!normalizedQuery) {
+      return sessions.slice(0, 8);
     }
-    try {
-      const api = getElectronAPI();
-      const result = await api.search(value);
-      setSearchSessions(result.sessions);
-      setSearchRequests(result.requests);
-    } catch {
-      // Ignore search errors
+    return sessions.filter((session) =>
+      [session.title, session.providerLabel, session.model]
+        .filter(Boolean)
+        .some((value) => value?.toLowerCase().includes(normalizedQuery)),
+    );
+  }, [normalizedQuery, sessions]);
+
+  const matchingProfiles = useMemo(() => {
+    if (!normalizedQuery) {
+      return profiles;
     }
-  }, []);
+    return profiles.filter((profile) =>
+      [profile.name, profile.providerId, profile.upstreamBaseUrl]
+        .some((value) => value.toLowerCase().includes(normalizedQuery)),
+    );
+  }, [normalizedQuery, profiles]);
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput
-        placeholder="Search sessions, requests, or actions..."
+        placeholder="Search sessions, profiles, or actions..."
         value={query}
-        onValueChange={handleSearch}
+        onValueChange={setQuery}
       />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
 
-        {searchSessions.length > 0 && (
+        {matchingSessions.length > 0 && (
           <CommandGroup heading="Sessions">
-            {searchSessions.map((s) => (
+            {matchingSessions.map((session) => (
               <CommandItem
-                key={s.sessionId}
+                key={session.sessionId}
                 onSelect={() => {
-                  selectSession(s.sessionId);
+                  selectSession(session.sessionId);
                   setOpen(false);
                 }}
               >
-                <span className="truncate">{s.title}</span>
-                {s.model && (
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {s.model}
-                  </span>
-                )}
+                <span className="truncate">{session.title}</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {session.providerLabel}
+                </span>
               </CommandItem>
             ))}
           </CommandGroup>
         )}
 
-        {searchRequests.length > 0 && (
-          <CommandGroup heading="Requests">
-            {searchRequests.map((r) => (
-              <CommandItem
-                key={r.requestId}
-                onSelect={() => {
-                  selectSession(r.sessionId);
-                  setOpen(false);
-                }}
-              >
-                <span className="font-mono text-xs">
-                  {r.method} {r.path}
-                </span>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {r.statusCode}
-                </span>
-              </CommandItem>
-            ))}
+        {matchingProfiles.length > 0 && (
+          <CommandGroup heading="Profiles">
+            {matchingProfiles.map((profile) => {
+              const isRunning = statuses[profile.id]?.isRunning ?? false;
+              return (
+                <CommandItem
+                  key={profile.id}
+                  onSelect={() => {
+                    void (isRunning
+                      ? stopProfile(profile.id)
+                      : startProfile(profile.id));
+                    setOpen(false);
+                  }}
+                >
+                  <span className="truncate">{profile.name}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {isRunning ? "Stop" : "Start"}
+                  </span>
+                </CommandItem>
+              );
+            })}
           </CommandGroup>
         )}
 
         <CommandGroup heading="Actions">
           <CommandItem
             onSelect={() => {
-              toggleListening();
+              void clearHistory();
               setOpen(false);
             }}
           >
-            Toggle Listening
-          </CommandItem>
-          <CommandItem
-            onSelect={() => {
-              clearData();
-              setOpen(false);
-            }}
-          >
-            Clear Data
+            Clear history
           </CommandItem>
         </CommandGroup>
       </CommandList>

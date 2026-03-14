@@ -1,23 +1,28 @@
 import { create } from "zustand";
-import type { SessionSummary } from "../../../shared/types";
+import type { SessionListItemVM } from "../../../shared/contracts";
 import { getElectronAPI } from "../lib/electron-api";
+import { useTraceStore } from "./trace-store";
 
 interface SessionState {
-  sessions: SessionSummary[];
+  sessions: SessionListItemVM[];
   selectedSessionId: string | null;
   searchQuery: string;
+  providerFilter: string | null;
 
   loadSessions: () => Promise<void>;
   selectSession: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
-  clearData: () => Promise<void>;
-  updateSessions: (sessions: SessionSummary[]) => void;
+  setProviderFilter: (filter: string | null) => void;
+  clearHistory: () => Promise<void>;
+  upsertSession: (session: SessionListItemVM) => void;
+  reset: () => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
   sessions: [],
   selectedSessionId: null,
   searchQuery: "",
+  providerFilter: null,
 
   loadSessions: async () => {
     const api = getElectronAPI();
@@ -25,15 +30,33 @@ export const useSessionStore = create<SessionState>((set) => ({
     set({ sessions });
   },
 
-  selectSession: (id) => set({ selectedSessionId: id }),
+  selectSession: (id) => {
+    set({ selectedSessionId: id });
+    if (!id) {
+      useTraceStore.getState().clear();
+    }
+  },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
 
-  clearData: async () => {
+  setProviderFilter: (filter) => set({ providerFilter: filter }),
+
+  clearHistory: async () => {
     const api = getElectronAPI();
-    await api.clearData();
+    await api.clearHistory();
+    useTraceStore.getState().clear();
     set({ sessions: [], selectedSessionId: null });
   },
 
-  updateSessions: (sessions) => set({ sessions }),
+  upsertSession: (session) =>
+    set((state) => ({
+      sessions: [
+        session,
+        ...state.sessions.filter((s) => s.sessionId !== session.sessionId),
+      ],
+    })),
+  reset: () => {
+    useTraceStore.getState().clear();
+    set({ sessions: [], selectedSessionId: null });
+  },
 }));

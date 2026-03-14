@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { useAppStore } from "./stores/app-store";
-import { SetupPage } from "./pages/setup-page";
+import { useProfileStore } from "./stores/profile-store";
 import { WorkspacePage } from "./pages/workspace-page";
 import { UpdateToastListener } from "./components/update-toast-listener";
+import { ProfileSetupPage } from "./features/profiles/profile-setup-page";
 
 function LoadingSkeleton() {
   return (
@@ -13,18 +14,19 @@ function LoadingSkeleton() {
 }
 
 export default function App() {
-  const { initialized, settings, initialize } = useAppStore();
+  const { initialized, initialize } = useAppStore();
+  const profiles = useProfileStore((state) => state.profiles);
 
   useEffect(() => {
     void initialize();
   }, [initialize]);
 
   if (!initialized) return <LoadingSkeleton />;
-  if (!settings?.targetUrl) {
+  if (profiles.length === 0) {
     return (
       <>
         <UpdateToastListener />
-        <SetupPage />
+        <ProfileSetupPage />
       </>
     );
   }

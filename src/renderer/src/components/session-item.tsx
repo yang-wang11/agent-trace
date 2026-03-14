@@ -1,10 +1,10 @@
 import { Badge } from "./ui/badge";
-import type { SessionSummary } from "../../../shared/types";
+import type { SessionListItemVM } from "../../../shared/contracts";
 import { cn } from "../lib/utils";
 import { stripXmlTags } from "../../../shared/strip-xml";
 
 interface SessionItemProps {
-  session: SessionSummary;
+  session: SessionListItemVM;
   isSelected: boolean;
   onClick: () => void;
 }
@@ -20,6 +20,17 @@ function formatTimeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
+function getProviderBadgeClasses(providerId: string): string {
+  switch (providerId) {
+    case "anthropic":
+      return "bg-orange-500/10 text-orange-500";
+    case "codex":
+      return "bg-emerald-500/10 text-emerald-500";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
 export function SessionItem({ session, isSelected, onClick }: SessionItemProps) {
   return (
     <button
@@ -32,13 +43,22 @@ export function SessionItem({ session, isSelected, onClick }: SessionItemProps) 
     >
       <p className="text-sm font-medium truncate">{stripXmlTags(session.title)}</p>
       <div className="flex items-center gap-2 mt-1">
+        <Badge
+          variant="secondary"
+          className={cn(
+            "text-[10px] px-1.5 py-0 border-0",
+            getProviderBadgeClasses(session.providerId),
+          )}
+        >
+          {session.providerLabel}
+        </Badge>
         {session.model && (
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
             {session.model}
           </Badge>
         )}
         <span className="text-[11px] text-muted-foreground">
-          {session.requestCount} req · {formatTimeAgo(session.updatedAt)}
+          {session.exchangeCount} exchanges · {formatTimeAgo(session.updatedAt)}
         </span>
       </div>
     </button>

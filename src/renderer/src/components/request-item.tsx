@@ -1,9 +1,9 @@
 import { Badge } from "./ui/badge";
 import { cn } from "../lib/utils";
-import type { RequestRecord } from "../../../shared/types";
+import type { ExchangeListItemVM } from "../../../shared/contracts";
 
 interface RequestItemProps {
-  request: RequestRecord;
+  request?: ExchangeListItemVM;
   isSelected: boolean;
   onClick: () => void;
 }
@@ -29,6 +29,10 @@ function formatDuration(ms: number | null): string {
 }
 
 export function RequestItem({ request, isSelected, onClick }: RequestItemProps) {
+  if (!request) {
+    return null;
+  }
+
   return (
     <button
       className={cn(
@@ -47,16 +51,13 @@ export function RequestItem({ request, isSelected, onClick }: RequestItemProps) 
           {request.statusCode ?? "..."}
         </span>
         <span className="text-muted-foreground">
-          {formatDuration(request.duration)}
+          {formatDuration(request.durationMs)}
         </span>
         {request.model && (
           <Badge variant="secondary" className="text-[10px] px-1 py-0">
             {request.model}
           </Badge>
         )}
-        <span className="text-muted-foreground text-[10px]">
-          ↑{formatSize(request.requestSize)}
-        </span>
       </div>
     </button>
   );

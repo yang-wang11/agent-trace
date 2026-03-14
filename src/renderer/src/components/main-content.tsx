@@ -8,18 +8,18 @@ import { ConversationHeader } from "./conversation-header";
 import { ConversationView } from "./conversation-view";
 import { InspectorPanel } from "./inspector-panel";
 import { useSessionStore } from "../stores/session-store";
-import { useRequestStore } from "../stores/request-store";
+import { useTraceStore } from "../stores/trace-store";
 
 export function MainContent() {
   const selectedSessionId = useSessionStore((s) => s.selectedSessionId);
-  const loadRequests = useRequestStore((s) => s.loadRequests);
-  const inspectorOpen = useRequestStore((s) => s.inspectorOpen);
+  const loadTrace = useTraceStore((state) => state.loadTrace);
+  const inspectorOpen = useTraceStore((state) => state.inspectorOpen);
 
   useEffect(() => {
     if (selectedSessionId) {
-      loadRequests(selectedSessionId);
+      void loadTrace(selectedSessionId);
     }
-  }, [selectedSessionId, loadRequests]);
+  }, [loadTrace, selectedSessionId]);
 
   if (!selectedSessionId) {
     return (

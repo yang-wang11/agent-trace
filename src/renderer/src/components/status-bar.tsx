@@ -1,34 +1,48 @@
 import { useState } from "react";
-import { Settings, Copy, Check } from "lucide-react";
+import { Check, Copy, Settings } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { useAppStore } from "../stores/app-store";
-import { ListeningToggle } from "./listening-toggle";
+import { useProfileStore } from "../stores/profile-store";
+import { useSessionStore } from "../stores/session-store";
 
 interface StatusBarProps {
   onSettingsClick: () => void;
 }
 
 export function StatusBar({ onSettingsClick }: StatusBarProps) {
-  const { isListening, proxyAddress } = useAppStore();
+  const profiles = useProfileStore((state) => state.profiles);
+  const statuses = useProfileStore((state) => state.statuses);
+  const sessions = useSessionStore((state) => state.sessions);
   const [copied, setCopied] = useState(false);
 
+  const runningProfiles = profiles.filter(
+    (profile) => statuses[profile.id]?.isRunning,
+  );
+  const primaryAddress = runningProfiles[0]
+    ? `127.0.0.1:${statuses[runningProfiles[0].id]?.port ?? runningProfiles[0].localPort}`
+    : null;
+
   const handleCopy = () => {
-    if (!proxyAddress) return;
-    navigator.clipboard.writeText(proxyAddress);
+    if (!primaryAddress) return;
+    navigator.clipboard.writeText(primaryAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
   return (
-    <div className="flex h-12 items-center justify-between border-b px-4 drag-region">
-      <span className="font-medium text-sm pl-16">Agent Trace</span>
+    <div className="drag-region flex h-12 items-center justify-between border-b px-4">
+      <span className="pl-16 text-sm font-medium">Agent Trace</span>
 
       <div className="flex items-center gap-3">
-        {isListening && proxyAddress && (
+        {profiles.length > 0 && (
+          <Badge variant="outline" className="text-xs">
+            {profiles.length} profile{profiles.length === 1 ? "" : "s"}
+          </Badge>
+        )}
+        {runningProfiles.length > 0 && primaryAddress && (
           <div className="flex items-center gap-1">
             <Badge variant="secondary" className="font-mono text-xs">
-              {proxyAddress}
+              {primaryAddress}
             </Badge>
             <Button
               variant="ghost"
@@ -45,7 +59,7 @@ export function StatusBar({ onSettingsClick }: StatusBarProps) {
             </Button>
           </div>
         )}
-        <ListeningToggle />
+        <span className="text-xs text-muted-foreground">{sessions.length} sessions</span>
         <Button
           variant="ghost"
           size="icon"
