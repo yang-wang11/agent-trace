@@ -50,38 +50,49 @@ describe("ProfileSetupPage", () => {
     });
   });
 
-  it("shows existing profiles and renders the provider cards", async () => {
+  it("shows provider cards and existing profiles on Step 1", async () => {
     render(<ProfileSetupPage />);
 
     expect(screen.getByText("Welcome to Agent Trace")).toBeInTheDocument();
     expect(screen.getByText("Claude Code")).toBeInTheDocument();
     expect(screen.getByText("Codex")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
 
     expect(await screen.findByText("anthropic-dev")).toBeInTheDocument();
   });
 
-  it("lets the user add a new profile via manual setup", async () => {
+  it("shows upstream URL and local address on Step 2", () => {
     render(<ProfileSetupPage />);
 
-    await screen.findByText("anthropic-dev");
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
-    // Click the "Manual setup" link to reveal the form
-    fireEvent.click(screen.getByText(/manual setup/i));
+    expect(
+      screen.getByDisplayValue("https://api.anthropic.com"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue("http://127.0.0.1:8888"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/ANTHROPIC_BASE_URL/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /start listening/i }),
+    ).toBeInTheDocument();
+  });
 
-    fireEvent.change(screen.getByLabelText(/profile name/i), {
-      target: { value: "codex-qa" },
-    });
-    fireEvent.change(screen.getByLabelText(/provider/i), {
-      target: { value: "codex" },
-    });
-    fireEvent.change(screen.getByLabelText(/upstream base url/i), {
-      target: { value: "https://chatgpt.com/backend-api/codex" },
-    });
-    fireEvent.change(screen.getByLabelText(/local port/i), {
-      target: { value: "8899" },
-    });
+  it("navigates to manual form from Step 2", async () => {
+    render(<ProfileSetupPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: /save profile/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByText(/manual configuration/i));
+
+    expect(screen.getByLabelText(/profile name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/upstream base url/i)).toBeInTheDocument();
+  });
+
+  it("creates a profile via quick-start on Step 2", async () => {
+    render(<ProfileSetupPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /start listening/i }));
 
     await waitFor(() => {
       expect(mockSaveProfiles).toHaveBeenCalledTimes(1);
