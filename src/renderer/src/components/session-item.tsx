@@ -57,8 +57,11 @@ export function SessionItem({ session, isSelected, onClick }: SessionItemProps) 
             {session.model}
           </Badge>
         )}
-        <span className="text-[11px] text-muted-foreground">
-          {session.exchangeCount} exchanges · {formatTimeAgo(session.updatedAt)}
+        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-mono">
+          {session.exchangeCount}
+        </Badge>
+        <span className="text-[10px] text-muted-foreground ml-auto shrink-0">
+          {formatTimeAgo(session.updatedAt)}
         </span>
       </div>
     </button>

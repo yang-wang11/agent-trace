@@ -89,7 +89,7 @@ describe("SessionItem", () => {
       />,
     );
     expect(screen.getByText("Anthropic")).toBeInTheDocument();
-    expect(screen.getByText(/5 exchanges/)).toBeInTheDocument();
+    expect(screen.getByText("5")).toBeInTheDocument();
   });
 });
 
