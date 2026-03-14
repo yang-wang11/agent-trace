@@ -21,7 +21,6 @@ mac:
     - zip
 dmg:
   background: resources/dmg-background.png
-  backgroundColor: "#141414"
   iconSize: 80
   window:
     width: 660
