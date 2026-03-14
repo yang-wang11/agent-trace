@@ -14,6 +14,16 @@ import {
 } from "../storage/session-repository";
 import type { ProviderCatalog } from "../providers/provider-catalog";
 
+function safeParseJson<T>(json: string | null | undefined, fallback: T): T {
+  if (!json) return fallback;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    console.warn("[SessionQueryService] Corrupted JSON in database:", error);
+    return fallback;
+  }
+}
+
 export class SessionQueryService {
   constructor(
     private readonly sessionRepository: SessionRepository,
@@ -45,9 +55,7 @@ export class SessionQueryService {
     return this.mapSessionRow(row);
   }
 
-  async listSessions(
-    filter?: SessionListFilter,
-  ): Promise<SessionListItemVM[]> {
+  listSessions(filter?: SessionListFilter): SessionListItemVM[] {
     const sessions = this.sessionRepository
       .listSessions()
       .map((row) => this.mapSessionRow(row));
@@ -76,7 +84,7 @@ export class SessionQueryService {
     });
   }
 
-  async getSessionTrace(sessionId: string): Promise<SessionTraceVM> {
+  getSessionTrace(sessionId: string): SessionTraceVM {
     const session = this.sessionRepository.getById(sessionId);
     if (!session) {
       throw new Error(`Unknown session: ${sessionId}`);
@@ -95,13 +103,24 @@ export class SessionQueryService {
 
     const exchanges = this.exchangeRepository.listBySessionId(sessionId);
     const normalizedExchanges = exchanges.map((row) =>
-      JSON.parse(row.normalized_json as string),
-    ) as NormalizedExchange[];
+      safeParseJson<NormalizedExchange>(row.normalized_json as string, {
+        exchangeId: row.exchange_id,
+        providerId,
+        profileId: session.profile_id,
+        endpointKind: "messages",
+        model: null,
+        request: { instructions: [], tools: [], inputMessages: [], meta: {} },
+        response: { outputMessages: [], stopReason: null, usage: null, error: null, meta: {} },
+      }),
+    );
 
-    const instructions: NormalizedBlock[] =
-      normalizedExchanges.length > 0
-        ? (normalizedExchanges[0].request.instructions ?? [])
-        : [];
+    const instructions = normalizedExchanges.reduce<NormalizedBlock[]>(
+      (best, exchange) => {
+        const current = exchange.request.instructions;
+        return current.length > best.length ? current : best;
+      },
+      [],
+    );
 
     return {
       sessionId: session.session_id,
@@ -112,9 +131,10 @@ export class SessionQueryService {
       instructions,
       timeline: adapter.timelineAssembler.build(normalizedExchanges),
       exchanges: exchanges.map((row) => {
-        const normalized = JSON.parse(row.normalized_json as string) as {
-          model: string | null;
-        };
+        const normalized = safeParseJson<{ model: string | null }>(
+          row.normalized_json as string,
+          { model: null },
+        );
         return {
           exchangeId: row.exchange_id,
           providerId,

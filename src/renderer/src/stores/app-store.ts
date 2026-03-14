@@ -6,74 +6,88 @@ import {
 } from "../../../shared/update";
 import { useProfileStore } from "./profile-store";
 
-let initializePromise: Promise<void> | null = null;
-let unsubscribeUpdateState: (() => void) | null = null;
-
 interface AppState {
   initialized: boolean;
   updateState: UpdateState;
+  commandPaletteOpen: boolean;
   initialize: () => Promise<void>;
   setUpdateState: (updateState: UpdateState) => void;
+  toggleCommandPalette: () => void;
+  setCommandPaletteOpen: (open: boolean) => void;
   checkForUpdates: () => Promise<void>;
   downloadUpdate: () => Promise<void>;
   quitAndInstallUpdate: () => Promise<void>;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
-  initialized: false,
-  updateState: createDefaultUpdateState(),
+export const useAppStore = create<AppState>((set, get) => {
+  let initializePromise: Promise<void> | null = null;
+  let unsubscribeUpdateState: (() => void) | null = null;
 
-  initialize: async () => {
-    if (get().initialized) {
-      return;
-    }
-    if (initializePromise) {
-      return initializePromise;
-    }
+  return {
+    initialized: false,
+    updateState: createDefaultUpdateState(),
+    commandPaletteOpen: false,
 
-    const api = getElectronAPI();
-    initializePromise = (async () => {
-      const [updateState] = await Promise.all([
-        api.getUpdateState(),
-        useProfileStore.getState().initialize(),
-      ]);
+    initialize: async () => {
+      if (get().initialized) {
+        return;
+      }
+      if (initializePromise) {
+        return initializePromise;
+      }
 
-      unsubscribeUpdateState?.();
-      unsubscribeUpdateState = api.onUpdateStateChanged((nextState) => {
-        set({ updateState: nextState });
-      });
+      const api = getElectronAPI();
+      initializePromise = (async () => {
+        const [updateState] = await Promise.all([
+          api.getUpdateState(),
+          useProfileStore.getState().initialize(),
+        ]);
 
-      set({
-        initialized: true,
-        updateState,
-      });
-    })();
+        unsubscribeUpdateState?.();
+        unsubscribeUpdateState = api.onUpdateStateChanged((nextState) => {
+          set({ updateState: nextState });
+        });
 
-    try {
-      await initializePromise;
-    } finally {
-      initializePromise = null;
-    }
-  },
+        set({
+          initialized: true,
+          updateState,
+        });
+      })();
 
-  setUpdateState: (updateState) => {
-    set({ updateState });
-  },
+      try {
+        await initializePromise;
+      } finally {
+        initializePromise = null;
+      }
+    },
 
-  checkForUpdates: async () => {
-    const api = getElectronAPI();
-    const updateState = await api.checkForUpdates();
-    set({ updateState });
-  },
+    setUpdateState: (updateState) => {
+      set({ updateState });
+    },
 
-  downloadUpdate: async () => {
-    const api = getElectronAPI();
-    const updateState = await api.downloadUpdate();
-    set({ updateState });
-  },
+    toggleCommandPalette: () => {
+      set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen }));
+    },
 
-  quitAndInstallUpdate: async () => {
-    const api = getElectronAPI();
-    await api.quitAndInstallUpdate();
-  },
-}));
+    setCommandPaletteOpen: (open) => {
+      set({ commandPaletteOpen: open });
+    },
+
+    checkForUpdates: async () => {
+      const api = getElectronAPI();
+      const updateState = await api.checkForUpdates();
+      set({ updateState });
+    },
+
+    downloadUpdate: async () => {
+      const api = getElectronAPI();
+      const updateState = await api.downloadUpdate();
+      set({ updateState });
+    },
+
+    quitAndInstallUpdate: async () => {
+      const api = getElectronAPI();
+      await api.quitAndInstallUpdate();
+    },
+  };
+});

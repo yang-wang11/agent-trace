@@ -9,25 +9,12 @@ import type {
   NormalizedUsage,
 } from "../../../../shared/contracts";
 import { getCapturedBodyText } from "../../../capture/body-codec";
-
-type JsonObject = Record<string, unknown>;
+import { parseJson, type JsonObject } from "../shared/parse-utils";
 
 interface AnthropicResponseState {
   outputMessages: NormalizedMessage[];
   stopReason: string | null;
   usage: NormalizedUsage | null;
-}
-
-function parseJson(body: string | null): JsonObject | null {
-  if (!body) return null;
-  try {
-    const parsed = JSON.parse(body);
-    return parsed && typeof parsed === "object"
-      ? (parsed as JsonObject)
-      : null;
-  } catch {
-    return null;
-  }
 }
 
 function normalizeInstructionBlock(block: unknown): NormalizedBlock | null {

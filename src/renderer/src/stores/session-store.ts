@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import type { SessionListItemVM } from "../../../shared/contracts";
 import { getElectronAPI } from "../lib/electron-api";
-import { useTraceStore } from "./trace-store";
 
 interface SessionState {
   sessions: SessionListItemVM[];
@@ -32,9 +31,6 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   selectSession: (id) => {
     set({ selectedSessionId: id });
-    if (!id) {
-      useTraceStore.getState().clear();
-    }
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -44,7 +40,6 @@ export const useSessionStore = create<SessionState>((set) => ({
   clearHistory: async () => {
     const api = getElectronAPI();
     await api.clearHistory();
-    useTraceStore.getState().clear();
     set({ sessions: [], selectedSessionId: null });
   },
 
@@ -55,8 +50,8 @@ export const useSessionStore = create<SessionState>((set) => ({
         ...state.sessions.filter((s) => s.sessionId !== session.sessionId),
       ],
     })),
+
   reset: () => {
-    useTraceStore.getState().clear();
     set({ sessions: [], selectedSessionId: null });
   },
 }));

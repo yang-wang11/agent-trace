@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { ExchangeDetailVM, SessionTraceVM } from "../../../shared/contracts";
 import { getElectronAPI } from "../lib/electron-api";
+import { useSessionStore } from "./session-store";
 
 interface TraceState {
   trace: SessionTraceVM | null;
@@ -43,10 +44,10 @@ export const useTraceStore = create<TraceState>((set, get) => {
     inspectorOpen: false,
     rawMode: false,
 
-  loadTrace: async (sessionId) => {
-    const api = getElectronAPI();
-    const nextVersion = ++syncVersion;
-    const trace = await api.getSessionTrace(sessionId);
+    loadTrace: async (sessionId) => {
+      const api = getElectronAPI();
+      const nextVersion = ++syncVersion;
+      const trace = await api.getSessionTrace(sessionId);
       if (syncVersion !== nextVersion) {
         return;
       }
@@ -88,7 +89,8 @@ export const useTraceStore = create<TraceState>((set, get) => {
 
     toggleInspector: () => set((state) => ({ inspectorOpen: !state.inspectorOpen })),
     toggleRawMode: () => set((state) => ({ rawMode: !state.rawMode })),
-    clear: () =>
+    clear: () => {
+      syncVersion++;
       set({
         trace: null,
         selectedExchangeId: null,
@@ -96,6 +98,17 @@ export const useTraceStore = create<TraceState>((set, get) => {
         exchangeDetails: {},
         inspectorOpen: false,
         rawMode: false,
-      }),
+      });
+    },
   };
+});
+
+// Coordinate: auto-clear trace when session is deselected or sessions are cleared
+useSessionStore.subscribe((state, prevState) => {
+  if (
+    (!state.selectedSessionId && prevState.selectedSessionId) ||
+    (state.sessions.length === 0 && prevState.sessions.length > 0)
+  ) {
+    useTraceStore.getState().clear();
+  }
 });

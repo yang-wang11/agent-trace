@@ -10,8 +10,7 @@ import type {
   NormalizedUsage,
 } from "../../../../shared/contracts";
 import { getCapturedBodyText } from "../../../capture/body-codec";
-
-type JsonObject = Record<string, unknown>;
+import { parseJson, parseMaybeJson, getString, type JsonObject } from "../shared/parse-utils";
 
 interface ResponseStreamState {
   items: Map<number, JsonObject>;
@@ -19,35 +18,6 @@ interface ResponseStreamState {
   status: string | null;
   error: NormalizedError | null;
   responseId: string | null;
-}
-
-function parseJson(body: string | null): JsonObject | null {
-  if (!body) return null;
-
-  try {
-    const parsed = JSON.parse(body);
-    return parsed && typeof parsed === "object"
-      ? (parsed as JsonObject)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function parseMaybeJson(value: unknown): unknown {
-  if (typeof value !== "string") {
-    return value ?? null;
-  }
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
-  }
-}
-
-function getString(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function normalizeInstructionBlock(instructions: unknown): NormalizedBlock[] {

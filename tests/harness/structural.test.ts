@@ -82,7 +82,6 @@ describe("Project Structure", () => {
     "src/renderer/src/stores/session-store.ts",
     "src/renderer/src/stores/trace-store.ts",
     "src/renderer/src/lib/electron-api.ts",
-    "src/renderer/src/pages/setup-page.tsx",
     "src/renderer/src/pages/workspace-page.tsx",
     "src/renderer/src/features/profiles/profile-form.tsx",
     "src/renderer/src/features/profiles/profile-setup-page.tsx",

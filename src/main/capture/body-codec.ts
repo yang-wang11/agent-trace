@@ -56,9 +56,11 @@ export function getCapturedBodyText(body: CapturedBody | null): string | null {
     try {
       return new TextDecoder(charset).decode(buffer);
     } catch {
+      console.warn(`[body-codec] Unsupported charset "${charset}", falling back to utf-8`);
       return new TextDecoder("utf-8").decode(buffer);
     }
-  } catch {
+  } catch (error) {
+    console.warn("[body-codec] Failed to decode body:", error);
     return null;
   }
 }

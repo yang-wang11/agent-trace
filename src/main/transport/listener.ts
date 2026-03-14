@@ -87,7 +87,11 @@ export function createProfileListener(
         socket.destroy();
       }
       await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          resolve();
+        }, 5_000);
         server?.close((error) => {
+          clearTimeout(timeout);
           if (error) reject(error);
           else resolve();
         });

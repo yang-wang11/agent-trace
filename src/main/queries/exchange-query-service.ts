@@ -6,13 +6,23 @@ import type {
 import { ExchangeRepository } from "../storage/exchange-repository";
 import type { ProviderCatalog } from "../providers/provider-catalog";
 
+function safeParseJson<T>(json: string | null | undefined, fallback: T): T {
+  if (!json) return fallback;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    console.warn("[ExchangeQueryService] Corrupted JSON in database:", error);
+    return fallback;
+  }
+}
+
 export class ExchangeQueryService {
   constructor(
     private readonly exchangeRepository: ExchangeRepository,
     private readonly providerCatalog: ProviderCatalog,
   ) {}
 
-  async getExchangeDetail(exchangeId: string): Promise<ExchangeDetailVM | null> {
+  getExchangeDetail(exchangeId: string): ExchangeDetailVM | null {
     const row = this.exchangeRepository.getById(exchangeId);
     if (!row) {
       return null;
@@ -20,10 +30,14 @@ export class ExchangeQueryService {
 
     const providerId = row.provider_id as ProviderId;
     const provider = this.providerCatalog.get(providerId);
-    const normalized = JSON.parse(row.normalized_json as string) as {
-      model: string | null;
-    };
-    const inspector = JSON.parse(row.inspector_json as string) as InspectorDocument;
+    const normalized = safeParseJson<{ model: string | null }>(
+      row.normalized_json as string,
+      { model: null },
+    );
+    const inspector = safeParseJson<InspectorDocument>(
+      row.inspector_json as string,
+      { sections: [] },
+    );
 
     return {
       exchangeId: row.exchange_id,

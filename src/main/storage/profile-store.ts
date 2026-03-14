@@ -25,7 +25,8 @@ export class ProfileStore {
       const raw = readFileSync(this.filePath, "utf-8");
       const parsed = JSON.parse(raw) as { profiles?: ConnectionProfile[] };
       return Array.isArray(parsed.profiles) ? parsed.profiles : [];
-    } catch {
+    } catch (error) {
+      console.warn("[ProfileStore] Failed to read profiles file, returning empty list:", error);
       return [];
     }
   }

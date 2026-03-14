@@ -1,5 +1,10 @@
 import type { ProviderId } from "../../shared/contracts";
 
+const LABELS: Record<ProviderId, string> = {
+  anthropic: "Anthropic",
+  codex: "Codex",
+};
+
 export function formatProviderLabel(providerId: ProviderId): string {
-  return providerId.charAt(0).toUpperCase() + providerId.slice(1);
+  return LABELS[providerId];
 }

@@ -124,7 +124,7 @@ export function MessageBlock({ message, rawMode }: MessageBlockProps) {
       </div>
       <div className="space-y-2 pl-1">
         {contentBlocks.map((block, i) => (
-          <ContentBlock key={i} block={block} />
+          <ContentBlock key={`${block.type}-${i}`} block={block} />
         ))}
       </div>
     </div>

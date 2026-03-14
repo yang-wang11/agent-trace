@@ -22,7 +22,7 @@ export function ConversationView({ timeline, rawMode }: ConversationViewProps) {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages]);
 
   if (messages.length === 0) {
     return (
@@ -46,7 +46,7 @@ export function ConversationView({ timeline, rawMode }: ConversationViewProps) {
           </div>
         )}
         {messages.map((msg, i) => (
-          <MessageBlock key={i} message={msg} rawMode={activeRawMode} />
+          <MessageBlock key={`${msg.role}-${i}`} message={msg} rawMode={activeRawMode} />
         ))}
         <div ref={bottomRef} />
       </div>

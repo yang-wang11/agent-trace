@@ -2,6 +2,7 @@ import { Settings } from "lucide-react";
 import { Button } from "./ui/button";
 import { useProfileStore } from "../stores/profile-store";
 import { useSessionStore } from "../stores/session-store";
+import { useAppStore } from "../stores/app-store";
 
 interface StatusBarProps {
   onSettingsClick: () => void;
@@ -11,6 +12,7 @@ export function StatusBar({ onSettingsClick }: StatusBarProps) {
   const profiles = useProfileStore((state) => state.profiles);
   const statuses = useProfileStore((state) => state.statuses);
   const sessions = useSessionStore((state) => state.sessions);
+  const toggleCommandPalette = useAppStore((state) => state.toggleCommandPalette);
 
   const runningProfiles = profiles.filter(
     (profile) => statuses[profile.id]?.isRunning,
@@ -18,12 +20,6 @@ export function StatusBar({ onSettingsClick }: StatusBarProps) {
   const primaryPort = runningProfiles[0]
     ? statuses[runningProfiles[0].id]?.port ?? runningProfiles[0].localPort
     : null;
-
-  function openCommandPalette() {
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "k", metaKey: true }),
-    );
-  }
 
   return (
     <div className="drag-region flex h-10 items-center justify-between border-b px-4">
@@ -61,7 +57,7 @@ export function StatusBar({ onSettingsClick }: StatusBarProps) {
         </Button>
         <button
           className="border border-border px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground hover:bg-muted hover:text-foreground"
-          onClick={openCommandPalette}
+          onClick={toggleCommandPalette}
           title="Command palette"
         >
           ⌘K

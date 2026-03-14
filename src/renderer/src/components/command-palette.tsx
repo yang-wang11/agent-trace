@@ -16,9 +16,12 @@ import {
 } from "./ui/dialog";
 import { useSessionStore } from "../stores/session-store";
 import { useProfileStore } from "../stores/profile-store";
+import { useAppStore } from "../stores/app-store";
+import { cn } from "../lib/utils";
 
 export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+  const open = useAppStore((state) => state.commandPaletteOpen);
+  const setOpen = useAppStore((state) => state.setCommandPaletteOpen);
   const [query, setQuery] = useState("");
   const sessions = useSessionStore((state) => state.sessions);
   const selectSession = useSessionStore((state) => state.selectSession);
@@ -32,12 +35,12 @@ export function CommandPalette() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
-        setOpen((previous) => !previous);
+        setOpen(!open);
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [open, setOpen]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const matchingSessions = useMemo(() => {
@@ -90,7 +93,7 @@ export function CommandPalette() {
                     }}
                   >
                     <span className="flex-1 truncate">{session.title}</span>
-                    <span className={`text-[9px] font-semibold px-1.5 py-0.5 ${providerBadgeClass(session.providerId)}`}>
+                    <span className={cn("text-[9px] font-semibold px-1.5 py-0.5", providerBadgeClass(session.providerId))}>
                       {session.providerLabel}
                     </span>
                   </CommandItem>
@@ -112,10 +115,10 @@ export function CommandPalette() {
                         setOpen(false);
                       }}
                     >
-                      <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${isRunning ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />
+                      <span className={cn("inline-block h-1.5 w-1.5 rounded-full shrink-0", isRunning ? "bg-emerald-500" : "bg-muted-foreground/30")} />
                       <span className="flex-1 truncate">{profile.name}</span>
                       <span className="text-[10px] font-mono text-muted-foreground">:{profile.localPort}</span>
-                      <span className={`text-[10px] ${isRunning ? "text-emerald-500" : "text-muted-foreground"}`}>
+                      <span className={cn("text-[10px]", isRunning ? "text-emerald-500" : "text-muted-foreground")}>
                         {isRunning ? "Running" : "Start"}
                       </span>
                     </CommandItem>
