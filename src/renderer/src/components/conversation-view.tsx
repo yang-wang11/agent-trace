@@ -1,10 +1,103 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ScrollArea } from "./ui/scroll-area";
 import { MessageBlock } from "./message-block";
-import type { NormalizedBlock, SessionTimeline } from "../../../shared/contracts";
+import { ContextChip } from "./context-chip";
+import type {
+  ContextType,
+  NormalizedBlock,
+  NormalizedMessage,
+  NormalizedMessageBlock,
+  SessionTimeline,
+} from "../../../shared/contracts";
 import { useTraceStore } from "../stores/trace-store";
 
 const EMPTY_INSTRUCTIONS: NormalizedBlock[] = [];
+
+type RenderItem =
+  | {
+      kind: "context-group";
+      contextType: ContextType | null;
+      label: string;
+      blocks: NormalizedMessageBlock[];
+      totalChars: number;
+    }
+  | { kind: "message"; message: NormalizedMessage };
+
+const CONTEXT_LABELS: Record<string, string> = {
+  "system-reminder": "System Reminder",
+  "hook-output": "Hook Output",
+  "skills-list": "Skills List",
+  "claude-md": "CLAUDE.md Context",
+};
+
+function buildRenderItems(messages: NormalizedMessage[]): RenderItem[] {
+  const items: RenderItem[] = [];
+
+  for (const msg of messages) {
+    // Walk blocks in order, emitting context-groups and organic message
+    // segments inline to preserve the original sequence.
+    let currentGroup: {
+      contextType: ContextType | null;
+      blocks: NormalizedMessageBlock[];
+      totalChars: number;
+    } | null = null;
+    let organicBlocks: NormalizedMessageBlock[] = [];
+
+    const flushGroup = () => {
+      if (currentGroup) {
+        items.push({
+          kind: "context-group",
+          contextType: currentGroup.contextType,
+          label: CONTEXT_LABELS[currentGroup.contextType ?? ""] ?? "Injected Context",
+          blocks: currentGroup.blocks,
+          totalChars: currentGroup.totalChars,
+        });
+        currentGroup = null;
+      }
+    };
+
+    const flushOrganic = () => {
+      if (organicBlocks.length > 0) {
+        items.push({
+          kind: "message",
+          message: { ...msg, blocks: organicBlocks },
+        });
+        organicBlocks = [];
+      }
+    };
+
+    for (const block of msg.blocks) {
+      if (block.meta?.injected) {
+        flushOrganic();
+        const ct = block.meta.contextType;
+        if (currentGroup && currentGroup.contextType === ct) {
+          currentGroup.blocks.push(block);
+          currentGroup.totalChars += block.meta.charCount;
+        } else {
+          flushGroup();
+          currentGroup = {
+            contextType: ct,
+            blocks: [block],
+            totalChars: block.meta.charCount,
+          };
+        }
+      } else {
+        flushGroup();
+        organicBlocks.push(block);
+      }
+    }
+    flushGroup();
+    flushOrganic();
+  }
+
+  return items;
+}
+
+function extractGroupContent(blocks: NormalizedMessageBlock[]): string {
+  return blocks
+    .map((b) => (b.type === "text" ? b.text : `[${b.type}]`))
+    .join("\n\n");
+}
 
 interface ConversationViewProps {
   timeline?: SessionTimeline;
@@ -14,11 +107,18 @@ interface ConversationViewProps {
 export function ConversationView({ timeline, rawMode }: ConversationViewProps) {
   const storeTrace = useTraceStore((state) => state.trace);
   const storeRawMode = useTraceStore((state) => state.rawMode);
-  const instructions = useTraceStore((state) => state.trace?.instructions ?? EMPTY_INSTRUCTIONS);
+  const instructions = useTraceStore(
+    (state) => state.trace?.instructions ?? EMPTY_INSTRUCTIONS,
+  );
   const bottomRef = useRef<HTMLDivElement>(null);
   const activeTimeline = timeline ?? storeTrace?.timeline ?? { messages: [] };
   const activeRawMode = rawMode ?? storeRawMode;
   const messages = activeTimeline.messages;
+
+  const renderItems = useMemo(
+    () => (activeRawMode ? null : buildRenderItems(messages)),
+    [messages, activeRawMode],
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,22 +132,45 @@ export function ConversationView({ timeline, rawMode }: ConversationViewProps) {
     );
   }
 
+  const instructionsText = instructions
+    .filter((b: NormalizedBlock) => b.type === "text")
+    .map((b: NormalizedBlock) => (b as { type: "text"; text: string }).text)
+    .join("\n");
+
   return (
     <ScrollArea className="h-full">
-      <div className="space-y-4 p-4 max-w-3xl mx-auto">
+      <div className="space-y-5 p-6 max-w-4xl mx-auto">
         {instructions.length > 0 && (
-          <div className="max-w-3xl mx-auto mb-4 p-3 bg-cyan-500/5 border border-cyan-500/10">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 mb-1.5">
-              System Instructions
-            </div>
-            <div className="text-xs text-muted-foreground line-clamp-3">
-              {instructions.filter((b: NormalizedBlock) => b.type === "text").map((b: NormalizedBlock) => (b as { type: "text"; text: string }).text).join("\n")}
-            </div>
-          </div>
+          <ContextChip
+            contextType="system-reminder"
+            label="System Instructions"
+            charCount={instructionsText.length}
+            content={instructionsText}
+            defaultExpanded={false}
+          />
         )}
-        {messages.map((msg, i) => (
-          <MessageBlock key={`${msg.role}-${i}`} message={msg} rawMode={activeRawMode} />
-        ))}
+        {activeRawMode
+          ? messages.map((msg, i) => (
+              <MessageBlock key={`msg-${i}`} message={msg} rawMode />
+            ))
+          : renderItems!.map((item, i) =>
+              item.kind === "context-group" ? (
+                <ContextChip
+                  key={`ctx-${i}`}
+                  contextType={item.contextType}
+                  label={item.label}
+                  charCount={item.totalChars}
+                  content={extractGroupContent(item.blocks)}
+                  defaultExpanded={false}
+                />
+              ) : (
+                <MessageBlock
+                  key={`msg-${i}`}
+                  message={item.message}
+                  rawMode={false}
+                />
+              ),
+            )}
         <div ref={bottomRef} />
       </div>
     </ScrollArea>

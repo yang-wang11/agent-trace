@@ -196,8 +196,8 @@ export function createUpdateService({
   };
 
   if (supported) {
-    updater.autoDownload = false;
-    updater.autoInstallOnAppQuit = false;
+    updater.autoDownload = true;
+    updater.autoInstallOnAppQuit = true;
     updater.on("checking-for-update", handleChecking);
     updater.on("update-available", handleAvailable);
     updater.on("update-not-available", handleNotAvailable);
@@ -206,17 +206,11 @@ export function createUpdateService({
     updater.on("error", handleError);
   }
 
-  const assertSupported = (): void => {
-    if (!supported) {
-      throw new Error(UNSUPPORTED_AUTO_UPDATE_MESSAGE);
-    }
-  };
-
   return {
     getState: () => ({ ...state }),
 
     checkForUpdates: async () => {
-      assertSupported();
+      if (!supported) return { ...state };
       if (checkDeferred) {
         return checkDeferred.promise;
       }
@@ -242,7 +236,7 @@ export function createUpdateService({
     },
 
     downloadUpdate: async () => {
-      assertSupported();
+      if (!supported) return { ...state };
       if (!state.availableVersion || state.status !== "available") {
         throw new Error("No update is available to download.");
       }
@@ -271,7 +265,7 @@ export function createUpdateService({
     },
 
     quitAndInstall: async () => {
-      assertSupported();
+      if (!supported) return;
       if (state.status !== "downloaded") {
         throw new Error("No downloaded release is available to install.");
       }

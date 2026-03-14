@@ -8,9 +8,11 @@ import {
 import { Button } from "./ui/button";
 import { useAppStore } from "../stores/app-store";
 import { useProfileStore } from "../stores/profile-store";
+import { useSessionStore } from "../stores/session-store";
 import { ProfileForm } from "../features/profiles/profile-form";
 import { cn } from "../lib/utils";
 import { toast } from "sonner";
+import { Github, ExternalLink, Trash2, Sparkles } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -26,6 +28,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   } = useAppStore();
   const { profiles, statuses, initialized, initialize, startProfile, stopProfile, upsertProfile } =
     useProfileStore();
+  const clearHistory = useSessionStore((s) => s.clearHistory);
   const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
@@ -36,17 +39,28 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   useEffect(() => {
     if (!open) {
       setShowAddForm(false);
+      return;
     }
-  }, [open]);
+    // Auto-check for updates every time settings is opened
+    if (updateState.status !== "downloading") {
+      void checkForUpdates();
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateButton = (() => {
     switch (updateState.status) {
       case "available":
         return <Button size="xs" onClick={() => void downloadUpdate()}>Download</Button>;
       case "downloaded":
-        return <Button size="xs" onClick={() => void quitAndInstallUpdate()}>Restart</Button>;
+        return (
+          <Button size="xs" className="bg-success text-white hover:bg-success/90" onClick={() => void quitAndInstallUpdate()}>
+            Restart to Update
+          </Button>
+        );
       case "downloading":
         return <Button size="xs" disabled>Downloading {Math.round(updateState.downloadPercent ?? 0)}%</Button>;
+      case "checking":
+        return <Button variant="outline" size="xs" disabled>Checking...</Button>;
       default:
         return <Button variant="outline" size="xs" onClick={() => void checkForUpdates()}>Check</Button>;
     }
@@ -89,7 +103,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           <div className="space-y-5">
             {/* Profiles Section */}
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                 Profiles
               </div>
               <div className="space-y-1">
@@ -103,16 +117,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       <div
                         className={cn(
                           "h-1.5 w-1.5 rounded-full flex-shrink-0",
-                          isRunning ? "bg-emerald-500" : "bg-muted-foreground/30",
+                          isRunning ? "bg-success" : "bg-muted-foreground/30",
                         )}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-medium">{profile.name}</div>
-                        <div className="text-[10px] text-muted-foreground font-mono truncate">
+                        <div className="text-[11px] text-muted-foreground font-mono truncate">
                           {profile.upstreamBaseUrl}
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0">
+                      <span className="text-[11px] font-mono text-muted-foreground flex-shrink-0">
                         :{profile.localPort}
                       </span>
                       <Button
@@ -146,13 +160,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 className="text-xs text-primary hover:underline mt-2"
                 onClick={() => setShowAddForm(true)}
               >
-                ＋ Add Profile
+                + Add Profile
               </button>
             </div>
 
             {/* Updates Section */}
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                 Updates
               </div>
               <div className="flex items-center gap-3 border border-border p-2.5">
@@ -161,10 +175,60 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     Version {updateState.currentVersion || "unknown"}
                   </div>
                   {statusMessage && (
-                    <div className="text-[10px] text-muted-foreground">{statusMessage}</div>
+                    <div className="text-[11px] text-muted-foreground">{statusMessage}</div>
                   )}
                 </div>
                 {updateButton}
+              </div>
+            </div>
+
+            {/* Data Section */}
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Data
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-destructive hover:text-destructive"
+                onClick={async () => {
+                  await clearHistory();
+                  toast.success("History cleared");
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
+                Clear all history
+              </Button>
+            </div>
+
+            {/* Links Section */}
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Links
+              </div>
+              <div className="space-y-1.5">
+                <button
+                  className="flex items-center gap-2 w-full text-left border border-border p-2.5 hover:bg-muted/50 transition-colors"
+                  onClick={() => void window.electronAPI.openExternal("https://github.com/dvlin-dev/agent-trace")}
+                >
+                  <Github className="h-4 w-4 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium">Agent Trace</div>
+                    <div className="text-[11px] text-muted-foreground">Star us on GitHub</div>
+                  </div>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
+                </button>
+                <button
+                  className="flex items-center gap-2 w-full text-left border border-accent-brand/30 bg-accent-brand-muted p-2.5 hover:bg-accent-brand/15 transition-colors"
+                  onClick={() => void window.electronAPI.openExternal("https://moryflow.com")}
+                >
+                  <Sparkles className="h-4 w-4 shrink-0 text-accent-brand" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium">Moryflow</div>
+                    <div className="text-[11px] text-muted-foreground">Local-first AI Agent Workspace</div>
+                  </div>
+                  <ExternalLink className="h-3 w-3 text-accent-brand shrink-0" />
+                </button>
               </div>
             </div>
           </div>

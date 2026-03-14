@@ -17,7 +17,7 @@ function createWindow(): void {
     minWidth: 800,
     minHeight: 600,
     titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 16, y: 16 },
+    trafficLightPosition: { x: 12, y: 11 },
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -69,10 +69,16 @@ app.whenReady().then(async () => {
   createWindow();
   await appBootstrap.startAutoStartProfiles();
 
-  const updateCheckTimer = setTimeout(() => {
+  // Check for updates shortly after launch, then every 30 minutes
+  const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+  const initialCheckTimer = setTimeout(() => {
     void updateService.checkForUpdates().catch(() => undefined);
-  }, 15_000);
-  updateCheckTimer.unref?.();
+  }, 5_000);
+  initialCheckTimer.unref?.();
+  const periodicCheckTimer = setInterval(() => {
+    void updateService.checkForUpdates().catch(() => undefined);
+  }, UPDATE_CHECK_INTERVAL_MS);
+  periodicCheckTimer.unref?.();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

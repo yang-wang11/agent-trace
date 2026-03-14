@@ -8,6 +8,7 @@ import type {
   SessionTraceVM,
 } from "../../shared/contracts";
 import { ExchangeRepository } from "../storage/exchange-repository";
+import { stripXmlTags } from "../../shared/strip-xml";
 import {
   SessionRepository,
   type SessionRow,
@@ -32,6 +33,24 @@ export class SessionQueryService {
     private readonly protocolAdapters: Map<string, ProtocolAdapter>,
   ) {}
 
+  private getAdapter(providerId: ProviderId): ProtocolAdapter | null {
+    const provider = this.providerCatalog.get(providerId);
+    if (!provider) {
+      return null;
+    }
+
+    return this.protocolAdapters.get(provider.protocolAdapterId) ?? null;
+  }
+
+  private deriveDisplayTitle(row: SessionRow): string {
+    // Clean the stored title (strip XML wrappers, trim).
+    // Heavy re-derivation from exchanges was removed to avoid N+1 queries
+    // on every listSessions call.  Titles are derived at capture time in
+    // the pipeline and stored in the session row already.
+    const cleaned = stripXmlTags(row.title).trim();
+    return cleaned || row.model || row.title;
+  }
+
   private mapSessionRow(row: SessionRow): SessionListItemVM {
     const providerId = row.provider_id as ProviderId;
     const provider = this.providerCatalog.get(providerId);
@@ -40,7 +59,7 @@ export class SessionQueryService {
       providerId,
       providerLabel: provider?.label ?? providerId,
       profileId: row.profile_id,
-      title: row.title,
+      title: this.deriveDisplayTitle(row),
       model: row.model,
       updatedAt: row.updated_at,
       exchangeCount: row.exchange_count,
@@ -96,7 +115,7 @@ export class SessionQueryService {
       throw new Error(`Unknown provider for session: ${providerId}`);
     }
 
-    const adapter = this.protocolAdapters.get(provider.protocolAdapterId);
+    const adapter = this.getAdapter(providerId);
     if (!adapter) {
       throw new Error(`Missing adapter: ${provider.protocolAdapterId}`);
     }
@@ -127,7 +146,7 @@ export class SessionQueryService {
       providerId,
       providerLabel: provider.label,
       profileId: session.profile_id,
-      title: session.title,
+      title: this.deriveDisplayTitle(session),
       instructions,
       timeline: adapter.timelineAssembler.build(normalizedExchanges),
       exchanges: exchanges.map((row) => {
