@@ -67,7 +67,17 @@ app.whenReady().then(async () => {
   });
 
   createWindow();
-  await appBootstrap.startAutoStartProfiles();
+
+  // Wait for renderer to be ready before starting profiles,
+  // otherwise status events are sent before the renderer can receive them.
+  mainWindow!.webContents.on("did-finish-load", async () => {
+    await appBootstrap!.startAutoStartProfiles();
+    // Broadcast final statuses after all profiles are started,
+    // in case the renderer initialized before profiles finished starting.
+    mainWindow?.webContents.send(IPC.PROFILE_STATUS_CHANGED, {
+      statuses: appBootstrap!.proxyManager.getStatuses(),
+    });
+  });
 
   // Check for updates shortly after launch, then every 30 minutes
   const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
