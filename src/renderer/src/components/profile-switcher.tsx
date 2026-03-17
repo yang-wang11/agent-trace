@@ -136,7 +136,7 @@ function ProfileRow({ profile, port, isRunning, onToggle, onEdit, onDelete }: Pr
 
   return (
     <div
-      className="group flex items-center gap-2 px-3 py-2.5 border border-border bg-card hover:bg-muted/40 rounded-md transition-colors"
+      className="group flex items-center gap-2 px-3 py-2.5 border border-border bg-card hover:bg-muted rounded-md transition-colors"
       onMouseEnter={() => setRowHovered(true)}
       onMouseLeave={() => setRowHovered(false)}
     >
@@ -148,11 +148,15 @@ function ProfileRow({ profile, port, isRunning, onToggle, onEdit, onDelete }: Pr
       />
       <ProviderBadge providerId={profile.providerId} className="shrink-0" />
       <span className="relative flex-1 min-w-0">
-        <span className={cn("text-xs font-medium truncate block", rowHovered && "invisible")}>
+        <span className="text-xs font-medium truncate block">
           {profile.name}
         </span>
+      </span>
+
+      <span className="relative shrink-0 flex items-center">
+        <span className="text-xs font-mono text-muted-foreground">:{port}</span>
         {rowHovered && (
-          <span className="absolute inset-0 flex items-center justify-end gap-0.5">
+          <span className="absolute inset-y-0 right-0 flex items-center gap-0.5 bg-muted pl-1">
             <button
               className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
               onClick={(e) => { e.stopPropagation(); onEdit(); }}
@@ -170,8 +174,6 @@ function ProfileRow({ profile, port, isRunning, onToggle, onEdit, onDelete }: Pr
           </span>
         )}
       </span>
-
-      <span className="text-xs font-mono text-muted-foreground shrink-0">:{port}</span>
       <button
         className={cn(
           "text-xs px-2 py-0.5 border shrink-0 w-[68px] text-center rounded-sm transition-all",
