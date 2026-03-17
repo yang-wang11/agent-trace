@@ -148,6 +148,14 @@ export ANTHROPIC_BASE_URL=http://127.0.0.1:8888
 export OPENAI_BASE_URL=http://127.0.0.1:8889
 ```
 
+## Release Process
+
+```bash
+bash ./scripts/release.sh <version>
+```
+
+Runs tests, builds, bumps version, commits, tags, and pushes. GitHub Actions handles the rest.
+
 ## Documentation
 
 See [docs/index.md](docs/index.md) for documentation entry point and [docs/CLAUDE.md](docs/CLAUDE.md) for doc governance rules.
