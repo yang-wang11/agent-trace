@@ -43,7 +43,10 @@ export function SessionItem({ session, isSelected, onClick }: SessionItemProps) 
       onClick={onClick}
     >
       <div className="overflow-hidden">
-        <p className="text-sm font-medium truncate">{stripXmlTags(session.title)}</p>
+        <p className={cn(
+          "text-sm font-medium truncate",
+          isSelected ? "text-foreground/80" : "text-foreground/70",
+        )}>{stripXmlTags(session.title)}</p>
       </div>
       <div className="relative mt-1.5 overflow-hidden">
         <div className="flex items-center gap-1.5 pr-16">
@@ -57,16 +60,16 @@ export function SessionItem({ session, isSelected, onClick }: SessionItemProps) 
             {session.providerLabel}
           </Badge>
           {session.model && (
-            <Badge variant="secondary" className="text-[11px] px-1.5 py-0 truncate min-w-0">
+            <Badge variant="secondary" className="text-[11px] px-1.5 py-0 truncate min-w-0 text-muted-foreground">
               {session.model}
             </Badge>
           )}
-          <Badge variant="secondary" className="text-[11px] px-1.5 py-0 font-mono shrink-0">
+          <Badge variant="secondary" className="text-[11px] px-1.5 py-0 font-mono shrink-0 text-muted-foreground">
             {session.exchangeCount}
           </Badge>
         </div>
         <span className="absolute right-0 top-0 bottom-0 flex items-center">
-          <Badge variant="secondary" className="text-[11px] px-1.5 py-0 shrink-0">
+          <Badge variant="secondary" className="text-[11px] px-1.5 py-0 shrink-0 text-muted-foreground">
             {formatTimeAgo(session.updatedAt)}
           </Badge>
         </span>
