@@ -1,5 +1,5 @@
 appId: com.dvlin.agent-trace
-productName: Agent Trace
+productName: Tracer
 directories:
   output: dist
   buildResources: resources
@@ -10,12 +10,11 @@ asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 mac:
   icon: resources/icon.icns
-  artifactName: Agent-Trace-${version}-${arch}.${ext}
+  artifactName: Tracer-${version}-${arch}.${ext}
   category: public.app-category.developer-tools
-  hardenedRuntime: true
+  identity: null
+  hardenedRuntime: false
   gatekeeperAssess: false
-  entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
   target:
     - dmg
     - zip
@@ -35,7 +34,7 @@ dmg:
       path: /Applications
 win:
   icon: resources/icon.png
-  artifactName: Agent-Trace-${version}-${arch}.${ext}
+  artifactName: Tracer-${version}-${arch}.${ext}
   target:
     - nsis
 nsis:
@@ -45,7 +44,7 @@ nsis:
 linux:
   target:
     - AppImage
-artifactName: Agent-Trace-${version}-${arch}.${ext}
+artifactName: Tracer-${version}-${arch}.${ext}
 publish:
   provider: github
   owner: dvlin-dev
