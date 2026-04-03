@@ -1,5 +1,8 @@
-import { ipcMain, type BrowserWindow } from "electron";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { dialog, ipcMain, shell, type BrowserWindow } from "electron";
 import { IPC } from "../../shared/ipc-channels";
+import type { AppDataTransferResult } from "../../shared/app-data";
 import type {
   ConnectionProfile,
   SessionListFilter,
@@ -7,6 +10,7 @@ import type {
 import type { UpdateService } from "../update/update-service";
 import type { ExchangeQueryService } from "../queries/exchange-query-service";
 import type { SessionQueryService } from "../queries/session-query-service";
+import type { DashboardQueryService } from "../queries/dashboard-query-service";
 import type { ProfileStore } from "../storage/profile-store";
 import type { ProxyManager } from "../transport/proxy-manager";
 
@@ -18,6 +22,9 @@ export interface IpcDependencies {
     "listSessions" | "getSessionTrace"
   >;
   exchangeQueryService: Pick<ExchangeQueryService, "getExchangeDetail">;
+  dashboardQueryService: Pick<DashboardQueryService, "getSessionDashboard">;
+  exportData: (filePath: string) => AppDataTransferResult;
+  importData: (filePath: string) => Promise<AppDataTransferResult>;
   clearHistory: () => void | Promise<void>;
   getMainWindow: () => BrowserWindow | null;
   updateService: UpdateService;
@@ -35,7 +42,87 @@ function broadcast(
   win.webContents.send(channel, payload);
 }
 
+function validateExternalUrl(input: string): string {
+  if (typeof input !== "string") {
+    throw new Error("Invalid external URL");
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(input);
+  } catch {
+    throw new Error("Invalid external URL");
+  }
+
+  if (!["http:", "https:", "mailto:"].includes(parsed.protocol)) {
+    throw new Error("Unsupported external URL protocol");
+  }
+
+  return parsed.toString();
+}
+
 export function registerIpcHandlers(deps: IpcDependencies): () => void {
+  ipcMain.handle(IPC.OPEN_EXTERNAL, async (_event, url: string) => {
+    await shell.openExternal(validateExternalUrl(url));
+  });
+
+  ipcMain.handle(IPC.EXPORT_APP_DATA, async () => {
+    const defaultPath = join(
+      homedir(),
+      `agent-trace-backup-${new Date().toISOString().slice(0, 10)}.zip`,
+    );
+    const window = deps.getMainWindow();
+    const dialogOptions: Electron.SaveDialogOptions = {
+      title: "Export Agent Trace Data",
+      defaultPath,
+      filters: [
+        { name: "Agent Trace Backup Archive", extensions: ["zip"] },
+      ],
+    };
+    const result = window
+      ? await dialog.showSaveDialog(window, dialogOptions)
+      : await dialog.showSaveDialog(dialogOptions);
+
+    if (result.canceled || !result.filePath) {
+      return null;
+    }
+
+    const exported = deps.exportData(result.filePath);
+    shell.showItemInFolder(result.filePath);
+    return exported;
+  });
+
+  ipcMain.handle(IPC.IMPORT_APP_DATA, async () => {
+    const window = deps.getMainWindow();
+    const dialogOptions: Electron.OpenDialogOptions = {
+      title: "Import Agent Trace Data",
+      properties: ["openFile"],
+      filters: [
+        { name: "Agent Trace Backups", extensions: ["zip"] },
+      ],
+    };
+    const result = window
+      ? await dialog.showOpenDialog(window, dialogOptions)
+      : await dialog.showOpenDialog(dialogOptions);
+
+    const filePath = result.filePaths[0];
+    if (result.canceled || !filePath) {
+      return null;
+    }
+
+    const imported = await deps.importData(filePath);
+    broadcast(deps.getMainWindow, IPC.PROFILES_CHANGED, {
+      profiles: deps.profileStore.getProfiles(),
+    });
+    broadcast(deps.getMainWindow, IPC.PROFILE_STATUS_CHANGED, {
+      statuses: deps.proxyManager.getStatuses(),
+    });
+    broadcast(deps.getMainWindow, IPC.TRACE_RESET, {
+      clearedAt: new Date().toISOString(),
+    });
+    return imported;
+  });
+
   ipcMain.handle(IPC.GET_PROFILES, () => {
     return deps.profileStore.getProfiles();
   });
@@ -138,6 +225,13 @@ export function registerIpcHandlers(deps: IpcDependencies): () => void {
       throw new Error("Invalid exchangeId");
     }
     return deps.exchangeQueryService.getExchangeDetail(exchangeId);
+  });
+
+  ipcMain.handle(IPC.GET_SESSION_DASHBOARD, (_event, sessionId: string) => {
+    if (typeof sessionId !== "string") {
+      throw new Error("Invalid sessionId");
+    }
+    return deps.dashboardQueryService.getSessionDashboard(sessionId);
   });
 
   ipcMain.handle(IPC.CLEAR_HISTORY, async () => {

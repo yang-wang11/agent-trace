@@ -1,10 +1,11 @@
-import { contextBridge, ipcRenderer, shell } from "electron";
+import { contextBridge, ipcRenderer } from "electron";
 import { IPC } from "../shared/ipc-channels";
 import type {
   ConnectionProfile,
   ExchangeDetailVM,
   ProfileStatusChangedEvent,
   ProfilesChangedEvent,
+  SessionDashboardVM,
   SessionListFilter,
   SessionListItemVM,
   SessionTraceVM,
@@ -16,7 +17,13 @@ import type { UpdateState } from "../shared/update";
 
 export const electronAPI: ElectronAPI = {
   openExternal: (url: string): Promise<void> =>
-    shell.openExternal(url),
+    ipcRenderer.invoke(IPC.OPEN_EXTERNAL, url),
+
+  exportAppData: () =>
+    ipcRenderer.invoke(IPC.EXPORT_APP_DATA),
+
+  importAppData: () =>
+    ipcRenderer.invoke(IPC.IMPORT_APP_DATA),
 
   getProfiles: (): Promise<ConnectionProfile[]> =>
     ipcRenderer.invoke(IPC.GET_PROFILES),
@@ -44,6 +51,9 @@ export const electronAPI: ElectronAPI = {
 
   getExchangeDetail: (exchangeId: string): Promise<ExchangeDetailVM | null> =>
     ipcRenderer.invoke(IPC.GET_EXCHANGE_DETAIL, exchangeId),
+
+  getSessionDashboard: (sessionId: string): Promise<SessionDashboardVM> =>
+    ipcRenderer.invoke(IPC.GET_SESSION_DASHBOARD, sessionId),
 
   clearHistory: (): Promise<void> => ipcRenderer.invoke(IPC.CLEAR_HISTORY),
 

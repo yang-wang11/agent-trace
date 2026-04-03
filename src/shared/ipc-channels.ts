@@ -1,4 +1,7 @@
 export const IPC = {
+  OPEN_EXTERNAL: "app:open-external",
+  EXPORT_APP_DATA: "app:export-data",
+  IMPORT_APP_DATA: "app:import-data",
   GET_PROFILES: "profiles:get",
   SAVE_PROFILES: "profiles:save",
   START_PROFILE: "profiles:start",
@@ -7,6 +10,7 @@ export const IPC = {
   LIST_SESSIONS: "app:list-sessions",
   GET_SESSION_TRACE: "trace:get-session",
   GET_EXCHANGE_DETAIL: "trace:get-exchange",
+  GET_SESSION_DASHBOARD: "trace:get-session-dashboard",
   CLEAR_HISTORY: "trace:clear-history",
   GET_UPDATE_STATE: "app:get-update-state",
   CHECK_FOR_UPDATES: "app:check-for-updates",

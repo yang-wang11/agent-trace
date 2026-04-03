@@ -7,6 +7,9 @@ export function getElectronAPI(): ElectronAPI {
   }
 
   const requiredMethods: Array<keyof ElectronAPI> = [
+    "openExternal",
+    "exportAppData",
+    "importAppData",
     "getProfiles",
     "saveProfiles",
     "startProfile",
@@ -15,6 +18,7 @@ export function getElectronAPI(): ElectronAPI {
     "listSessions",
     "getSessionTrace",
     "getExchangeDetail",
+    "getSessionDashboard",
     "clearHistory",
     "getUpdateState",
     "checkForUpdates",
